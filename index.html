@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive PDF Workspace (Chrome Search Focus + Custom Save + Eraser)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #1e1e24;
+            color: #f5f5f7;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Toolbar Styling */
+        .toolbar {
+            background-color: #2b2b36;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background-color: #4a4a5a;
+            margin: 0 4px;
+        }
+
+        /* Buttons & Inputs */
+        .btn {
+            background-color: #3a3a4a;
+            color: #fff;
+            border: 1px solid #4a4a5a;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #4a4a5a;
+            border-color: #6200ee;
+        }
+
+        .btn:disabled {
+            background-color: #252530;
+            color: #707080;
+            border-color: #303040;
+            cursor: not-allowed;
+        }
+
+        .btn.active {
+            background-color: #6200ee;
+            border-color: #7c4dff;
+            color: white;
+        }
+
+        select.btn {
+            appearance: none;
+            padding-right: 28px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 14px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            font-size: 100px;
+            cursor: pointer;
+        }
+
+        .page-info, .zoom-info {
+            font-size: 14px;
+            color: #a0a0b0;
+            text-align: center;
+        }
+        .page-info { min-width: 80px; }
+        .zoom-info { min-width: 60px; }
+
+        .search-input {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #4a4a5a;
+            background-color: #1e1e24;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            width: 150px;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus {
+            border-color: #6200ee;
+        }
+        
+        #search-count {
+            font-size: 13px;
+            color: #a0a0b0;
+            min-width: 40px;
+        }
+
+        /* Dynamic Tabs Layout Interface */
+        .tab-bar {
+            background-color: #252530;
+            display: flex;
+            align-items: flex-end;
+            padding: 6px 20px 0 20px;
+            gap: 6px;
+            border-bottom: 1px solid #3a3a4a;
+            z-index: 9;
+            user-select: none;
+        }
+
+        .tabs-wrapper {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+        }
+
+        .tab-btn {
+            background-color: #2b2b36;
+            color: #a0a0b0;
+            border: 1px solid #3a3a4a;
+            border-bottom: none;
+            padding: 10px 14px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            cursor: grab;
+            font-size: 13px;
+            font-weight: 500;
+            max-width: 220px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .tab-btn:active {
+            cursor: grabbing;
+        }
+
+        .tab-btn.dragging {
+            opacity: 0.4;
+            background-color: #1a1a24;
+        }
+
+        .tab-btn:hover {
+            background-color: #3a3a4a;
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background-color: #1e1e24;
+            color: #fff;
+            border-color: #4a4a5a;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .tab-btn.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #6200ee;
+        }
+
+        .tab-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+            pointer-events: none; /* Smooth drag stability bypass */
+        }
+
+        .close-tab-x {
+            font-size: 16px;
+            font-weight: bold;
+            color: #707080;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            transition: all 0.15s ease;
+        }
+
+        .close-tab-x:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: #ff3b30;
+        }
+
+        .add-tab-btn {
+            background-color: #2b2b36;
+            color: #a0a0b0;
+            border: 1px solid #3a3a4a;
+            border-bottom: none;
+            padding: 8px 16px;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 37px;
+        }
+
+        .add-tab-btn:hover {
+            background-color: #3a3a4a;
+            color: #fff;
+            border-color: #6200ee;
+        }
+
+        /* Viewer Container */
+        .viewer-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .viewer-container.panning { cursor: grabbing; }
+        .viewer-container.drawing-mode { cursor: crosshair; }
+
+        /* Page Wrapper */
+        .page-wrapper {
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            background-color: #fff;
+            display: none;
+            transform: translate(0px, 0px);
+            will-change: transform;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .annotation-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        /* Sticky Box Styling */
+        .note-box {
+            position: absolute;
+            width: 220px;
+            background-color: #fff7c2;
+            border: 1px solid #e6db87;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            padding: 6px;
+            z-index: 100;
+            pointer-events: auto;
+            cursor: move;
+        }
+
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            border-bottom: 1px solid #e6db87;
+            padding-bottom: 4px;
+        }
+
+        .note-pin {
+            font-size: 12px;
+            color: #8b8036;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .note-close {
+            background: none;
+            border: none;
+            color: #8b8036;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .note-close:hover { color: #ff3b30; }
+
+        .note-textarea {
+            width: 100%;
+            height: 80px;
+            background: transparent;
+            border: none;
+            resize: vertical;
+            font-size: 13px;
+            color: #333;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* Placeholder */
+        .placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #707080;
+        }
+
+        .placeholder svg {
+            width: 64px;
+            height: 64px;
+            fill: currentColor;
+            margin-bottom: 16px;
+        }
+
+        /* Tip Banner */
+        .tip-banner {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(43, 43, 54, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #a0a0b0;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <div class="file-input-wrapper">
+                <button id="btn-open-pdf" class="btn" style="background-color: #6200ee; border-color: #7c4dff;">
+                    📂 Open PDF
+                </button>
+                <input type="file" id="file-selector" accept="application/pdf" style="display: none;">
+            </div>
+            <select id="session-select" class="btn" disabled>
+                <option value="" selected hidden>💾 Save/Load Project</option>
+                <option value="export">Export Session (JSON)</option>
+                <option value="import">Import Session (JSON)</option>
+            </select>
+            <input type="file" id="session-file-picker" accept=".json" style="display: none;">
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group">
+            <button class="btn" id="btn-prev" disabled>◀</button>
+            <span class="page-info" id="page-info">Page: 0 / 0</span>
+            <button class="btn" id="btn-next" disabled>▶</button>
+        </div>
+
+        <div class="toolbar-group">
+            <button class="btn" id="btn-zoom-out" disabled>➖</button>
+            <span class="zoom-info" id="zoom-info">100%</span>
+            <button class="btn" id="btn-zoom-in" disabled>➕</button>
+            <button class="btn" id="btn-rotate" disabled title="Rotate Clockwise">🔄 Rotate</button>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group">
+            <input type="text" id="search-input" class="search-input" placeholder="Search text..." disabled>
+            <button class="btn" id="btn-search-prev" disabled>▲</button>
+            <button class="btn" id="btn-search-next" disabled>▼</button>
+            <span id="search-count">0/0</span>
+        </div>
+
+        <div class="toolbar-divider"></div>
+
+        <div class="toolbar-group">
+            <select id="tool-select" class="btn" disabled style="min-width: 170px;">
+                <option value="view">✋ Mode: Pan / View</option>
+                <option value="note">📌 Tool: Sticky Note</option>
+                <option value="pen">✏️ Tool: Brush Pen</option>
+                <option value="rect">⬛ Tool: Box Shape</option>
+                <option value="circle">⚪ Tool: Circle Shape</option>
+                <option value="text">🔤 Tool: Add Page Text</option>
+                <option value="eraser">🧼 Tool: Eraser</option>
+            </select>
+            <input type="color" id="edit-color" value="#ff3b30" title="Select Tool Color" disabled style="width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; background: transparent;">
+            
+            <select id="edit-thickness" class="btn" disabled style="padding: 8px 6px;">
+                <option value="0.5">0.5px</option>
+                <option value="1">1px</option>
+                <option value="2" selected>2px</option>
+                <option value="4">4px</option>
+                <option value="6">6px</option>
+                <option value="10">10px</option>
+            </select>
+            <button class="btn" id="btn-clear-drawings" title="Clear All Vector Edits" disabled style="color: #ff3b30;">🗑️ Clear Page</button>
+        </div>
+    </div>
+
+    <!-- Dynamic Tab Bar Header -->
+    <div class="tab-bar" id="tab-bar">
+        <div id="tabs-wrapper" class="tabs-wrapper">
+            <!-- Tabs injected dynamically here -->
+        </div>
+        <button class="add-tab-btn" id="btn-add-tab" title="Open New Tab">+</button>
+    </div>
+
+    <div class="viewer-container" id="viewer-container">
+        <div class="placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="9" y1="15" x2="15" y2="15"></line>
+                <line x1="9" y1="11" x2="15" y2="11"></line>
+                <line x1="9" y1="17" x2="11" y2="17"></line>
+            </svg>
+            <h3>No PDF loaded</h3>
+            <p style="margin-top: 6px; font-size: 14px;">Click "Open PDF" to begin interacting</p>
+        </div>
+
+        <div class="page-wrapper" id="page-wrapper">
+            <canvas id="pdf-canvas"></canvas>
+            <canvas id="drawing-canvas"></canvas>
+            <div class="annotation-layer" id="annotation-layer"></div>
+        </div>
+    </div>
+
+    <div class="tip-banner" id="tip-banner">Mode: View | Hold Left-Click & Drag to Pan</div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+        // --- Core Tab Management Engine State Variables ---
+        let activeTabId = 0;
+        let tabIdCounter = 1;
+        let draggedTabId = null; // Reordering hook trace reference
+        
+        function createNewTabObject(id, labelName) {
+            return {
+                id: id,
+                pdfDoc: null,
+                fileName: labelName || `Tab ${id + 1} (Empty)`,
+                currentPage: 1,
+                currentScale: 1.0,
+                currentRotation: 0,
+                currentViewport: null,
+                notesData: [],
+                drawingsData: [],
+                currentPageItems: [],
+                panX: 0,
+                panY: 0,
+                searchMatches: [],
+                currentMatchIndex: -1,
+                searchSessionCounter: 0,
+                searchInputVal: ""
+            };
+        }
+
+        // Initialize with exactly 1 dynamic tab instance
+        let tabs = [createNewTabObject(0, "Tab 1 (Empty)")];
+
+        // Shared Tool Workspace Properties
+        let currentTool = 'view'; 
+        let isPanning = false;
+        let startX = 0, startY = 0;
+        let isDrawing = false;
+        let currentDrawingItem = null;
+
+        // DOM Elements Link
+        const btnOpenPdf = document.getElementById('btn-open-pdf');
+        const fileSelector = document.getElementById('file-selector');
+        const sessionSelect = document.getElementById('session-select');
+        const sessionFilePicker = document.getElementById('session-file-picker');
+        
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        const btnRotate = document.getElementById('btn-rotate');
+        
+        const searchInput = document.getElementById('search-input');
+        const btnSearchPrev = document.getElementById('btn-search-prev');
+        const btnSearchNext = document.getElementById('btn-search-next');
+        const searchCountSpan = document.getElementById('search-count');
+
+        const toolSelect = document.getElementById('tool-select');
+        const editColor = document.getElementById('edit-color');
+        const editThickness = document.getElementById('edit-thickness');
+        const btnClearDrawings = document.getElementById('btn-clear-drawings');
+
+        const pageInfo = document.getElementById('page-info');
+        const zoomInfo = document.getElementById('zoom-info');
+        const placeholder = document.getElementById('placeholder');
+        const tipBanner = document.getElementById('tip-banner');
+        
+        const viewerContainer = document.getElementById('viewer-container');
+        const pageWrapper = document.getElementById('page-wrapper');
+        const canvas = document.getElementById('pdf-canvas');
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        const annotationLayer = document.getElementById('annotation-layer');
+        
+        const ctx = canvas.getContext('2d');
+        const dCtx = drawingCanvas.getContext('2d');
+        
+        const tabsWrapper = document.getElementById('tabs-wrapper');
+        const btnAddTab = document.getElementById('btn-add-tab');
+
+        // --- Render Dynamic Tabs Interface Node Loop with Chrome Reordering + Close Buttons ---
+        function renderTabsUI() {
+            tabsWrapper.innerHTML = '';
+            tabs.forEach((tab) => {
+                const tabEl = document.createElement('button');
+                tabEl.className = `tab-btn${tab.id === activeTabId ? ' active' : ''}`;
+                tabEl.dataset.id = tab.id;
+                tabEl.draggable = true;
+
+                // Title Text Element
+                const textSpan = document.createElement('span');
+                textSpan.className = 'tab-text';
+                textSpan.textContent = tab.fileName;
+                tabEl.appendChild(textSpan);
+
+                // Native Tab Closure Button Layer
+                const closeX = document.createElement('span');
+                closeX.className = 'close-tab-x';
+                closeX.innerHTML = '&times;';
+                closeX.title = "Close Tab";
+                closeX.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Avoid triggering tab selection context switches
+                    closeTab(tab.id);
+                });
+                tabEl.appendChild(closeX);
+
+                // --- Tab Activation Event Switcher ---
+                tabEl.addEventListener('click', () => {
+                    if (tab.id !== activeTabId) switchTab(tab.id);
+                });
+
+                // --- Drag and Drop Chrome Reordering System Event Nodes ---
+                tabEl.addEventListener('dragstart', (e) => {
+                    draggedTabId = tab.id;
+                    tabEl.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                tabEl.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Required authorization block to accept dropping mechanics
+                });
+
+                tabEl.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const targetId = parseInt(tabEl.dataset.id);
+                    if (draggedTabId === null || draggedTabId === targetId) return;
+
+                    const draggedIndex = tabs.findIndex(t => t.id === draggedTabId);
+                    const targetIndex = tabs.findIndex(t => t.id === targetId);
+
+                    if (draggedIndex !== -1 && targetIndex !== -1) {
+                        // Extract array metadata value and insert at targeted drop point index location
+                        const [movedTab] = tabs.splice(draggedIndex, 1);
+                        tabs.splice(targetIndex, 0, movedTab);
+                        renderTabsUI();
+                    }
+                });
+
+                tabEl.addEventListener('dragend', () => {
+                    tabEl.classList.remove('dragging');
+                    draggedTabId = null;
+                });
+
+                tabsWrapper.appendChild(tabEl);
+            });
+        }
+
+        // --- Close Tab Operation Engine Rule Matrix ---
+        function closeTab(tabId) {
+            const index = tabs.findIndex(t => t.id === tabId);
+            if (index === -1) return;
+
+            const wasActive = (tabId === activeTabId);
+            tabs.splice(index, 1);
+
+            if (tabs.length === 0) {
+                // If zero tabs remain, reset layout matrix cleanly with a blank Tab 1 instance
+                tabIdCounter = 1;
+                tabs.push(createNewTabObject(0, "Tab 1 (Empty)"));
+                activeTabId = 0;
+            } else if (wasActive) {
+                // Safely drop index tracker backward onto neighboring adjacent index tab
+                const newIndex = Math.min(index, tabs.length - 1);
+                activeTabId = tabs[newIndex].id;
+            }
+
+            switchTab(activeTabId);
+        }
+
+        // --- Tab Selection Swapper Handling Engine ---
+        function switchTab(tabId) {
+            const oldTab = tabs.find(t => t.id === activeTabId);
+            if (oldTab) oldTab.searchInputVal = searchInput.value;
+
+            activeTabId = tabId;
+            renderTabsUI();
+
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+
+            searchInput.value = tab.searchInputVal;
+
+            if (tab.pdfDoc) {
+                placeholder.style.display = 'none';
+                pageWrapper.style.display = 'block';
+                tipBanner.style.display = 'block';
+
+                pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+                
+                const enabledElements = [sessionSelect, btnPrev, btnNext, btnZoomIn, btnZoomOut, btnRotate, searchInput, btnSearchPrev, btnSearchNext, toolSelect, editColor, editThickness, btnClearDrawings];
+                enabledElements.forEach(el => el.disabled = false);
+
+                updateSearchUI();
+                renderPage(tab.currentPage);
+            } else {
+                placeholder.style.display = 'block';
+                pageWrapper.style.display = 'none';
+                
+                pageInfo.textContent = `Page: 0 / 0`;
+                zoomInfo.textContent = `100%`;
+                searchCountSpan.textContent = "0/0";
+
+                const disabledElements = [sessionSelect, btnPrev, btnNext, btnZoomIn, btnZoomOut, btnRotate, searchInput, btnSearchPrev, btnSearchNext, toolSelect, editColor, editThickness, btnClearDrawings];
+                disabledElements.forEach(el => el.disabled = true);
+
+                dCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                annotationLayer.innerHTML = '';
+            }
+        }
+
+        // Add Tab Action Handler
+        btnAddTab.addEventListener('click', () => {
+            if (tabs.length >= 10) {
+                alert("Maximum limit of 10 tabs reached.");
+                return;
+            }
+            const newId = tabIdCounter++;
+            const newTab = createNewTabObject(newId, `Tab ${tabs.length + 1} (Empty)`);
+            tabs.push(newTab);
+            switchTab(newId);
+        });
+
+        // --- Document File Selection Stream ---
+        btnOpenPdf.addEventListener('click', async () => {
+            if ('showOpenFilePicker' in window) {
+                try {
+                    const [handle] = await window.showOpenFilePicker({
+                        types: [{
+                            description: 'PDF Documents',
+                            accept: { 'application/pdf': ['.pdf'] }
+                        }]
+                    });
+                    const file = await handle.getFile();
+                    processPdfFile(file);
+                } catch (err) {
+                    if (err.name !== 'AbortError') console.error(err);
+                }
+            } else {
+                fileSelector.click();
+            }
+        });
+
+        fileSelector.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            processPdfFile(file);
+        });
+
+        function processPdfFile(file) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+
+            if (file && file.type === "application/pdf") {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const typedarray = new Uint8Array(evt.target.result);
+                    
+                    tab.fileName = file.name;
+                    renderTabsUI();
+                    loadPDF(typedarray);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        async function loadPDF(data) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            try {
+                tab.pdfDoc = await pdfjsLib.getDocument({ data: data }).promise;
+                tab.currentPage = 1;
+                tab.currentScale = 1.0;
+                tab.currentRotation = 0;
+                tab.notesData = [];
+                tab.drawingsData = [];
+                tab.searchMatches = [];
+                tab.currentMatchIndex = -1;
+                tab.searchInputVal = '';
+                searchInput.value = '';
+                resetPan();
+                
+                placeholder.style.display = 'none';
+                pageWrapper.style.display = 'block';
+                tipBanner.style.display = 'block';
+                
+                const enabledElements = [sessionSelect, btnPrev, btnNext, btnZoomIn, btnZoomOut, btnRotate, searchInput, btnSearchPrev, btnSearchNext, toolSelect, editColor, editThickness, btnClearDrawings];
+                enabledElements.forEach(el => el.disabled = false);
+                
+                renderPage(tab.currentPage);
+            } catch (error) {
+                alert("Error configuring document engine: " + error.message);
+            }
+        }
+
+        function resetPan() {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            tab.panX = 0; tab.panY = 0;
+            pageWrapper.style.transform = `translate(0px, 0px)`;
+        }
+
+        // --- Core Render Vector Generator Engine ---
+        async function renderPage(num) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pdfDoc) return;
+            const page = await tab.pdfDoc.getPage(num);
+            
+            tab.currentViewport = page.getViewport({ scale: tab.currentScale, rotation: tab.currentRotation });
+            
+            canvas.height = tab.currentViewport.height;
+            canvas.width = tab.currentViewport.width;
+            drawingCanvas.width = tab.currentViewport.width;
+            drawingCanvas.height = tab.currentViewport.height;
+            
+            pageWrapper.style.width = `${tab.currentViewport.width}px`;
+            pageWrapper.style.height = `${tab.currentViewport.height}px`;
+
+            const renderContext = { canvasContext: ctx, viewport: tab.currentViewport };
+            await page.render(renderContext).promise;
+            
+            pageInfo.textContent = `Page: ${num} / ${tab.pdfDoc.numPages}`;
+            zoomInfo.textContent = `${Math.round(tab.currentScale * 100)}%`;
+            
+            btnPrev.disabled = (num <= 1);
+            btnNext.disabled = (num >= tab.pdfDoc.numPages);
+            
+            const textContent = await page.getTextContent();
+            tab.currentPageItems = textContent.items;
+            
+            redrawDrawingCanvas();
+            renderNotes(tab.currentViewport);
+        }
+
+        // --- Multi-Scale Zoom Handles ---
+        btnZoomIn.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.currentScale >= 50.0) return; 
+            tab.currentScale = parseFloat((tab.currentScale + 0.50).toFixed(2));
+            renderPage(tab.currentPage);
+        });
+
+        btnZoomOut.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.currentScale <= 0.25) return; 
+            tab.currentScale = parseFloat((tab.currentScale - 0.50).toFixed(2));
+            if (tab.currentScale < 0.25) tab.currentScale = 0.25;
+            renderPage(tab.currentPage);
+        });
+
+        // HOLD CTRL + MOUSE WHEEL ZOOM MECHANISM WITH ZOOM-TO-CURSOR
+        viewerContainer.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault(); 
+                const tab = tabs.find(t => t.id === activeTabId);
+                if (!tab || !tab.pdfDoc) return;
+
+                const oldScale = tab.currentScale;
+                let newScale = tab.currentScale;
+                const zoomFactorStep = 0.15; 
+
+                if (e.deltaY < 0) {
+                    if (newScale < 50.0) {
+                        newScale = parseFloat((newScale + zoomFactorStep).toFixed(2));
+                    }
+                } else {
+                    if (newScale > 0.25) {
+                        newScale = parseFloat((newScale - zoomFactorStep).toFixed(2));
+                        if (newScale < 0.25) newScale = 0.25;
+                    }
+                }
+
+                if (newScale !== oldScale) {
+                    const rect = viewerContainer.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const mouseY = e.clientY - rect.top;
+
+                    const pageX = mouseX - tab.panX;
+                    const pageY = mouseY - tab.panY;
+
+                    tab.currentScale = newScale;
+
+                    tab.panX = mouseX - pageX * (newScale / oldScale);
+                    tab.panY = mouseY - pageY * (newScale / oldScale);
+
+                    pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+                    renderPage(tab.currentPage);
+                }
+            }
+        }, { passive: false });
+
+        btnRotate.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            tab.currentRotation = (tab.currentRotation + 90) % 360;
+            renderPage(tab.currentPage);
+        });
+
+        btnPrev.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.currentPage <= 1) return;
+            tab.currentPage--;
+            resetPan();
+            renderPage(tab.currentPage);
+        });
+
+        btnNext.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.currentPage >= tab.pdfDoc.numPages) return;
+            tab.currentPage++;
+            resetPan();
+            renderPage(tab.currentPage);
+        });
+
+        // --- Infinite Workspace 2D Translation Panning Engine ---
+        viewerContainer.addEventListener('mousedown', (e) => {
+            if (currentTool !== 'view') return;
+            isPanning = true;
+            viewerContainer.classList.add('panning');
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            startX = e.clientX - tab.panX;
+            startY = e.clientY - tab.panY;
+        });
+
+        viewerContainer.addEventListener('mousemove', (e) => {
+            if (!isPanning) return;
+            e.preventDefault();
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            tab.panX = e.clientX - startX;
+            tab.panY = e.clientY - startY;
+            pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+        });
+
+        const stopPanning = () => {
+            isPanning = false;
+            viewerContainer.classList.remove('panning');
+        };
+        viewerContainer.addEventListener('mouseup', stopPanning);
+        viewerContainer.addEventListener('mouseleave', stopPanning);
+
+        // --- Active Tool Mode Controls ---
+        toolSelect.addEventListener('change', (e) => {
+            currentTool = e.target.value;
+            if (currentTool === 'view') {
+                viewerContainer.className = "viewer-container";
+                drawingCanvas.style.pointerEvents = 'none';
+                annotationLayer.style.pointerEvents = 'none';
+                tipBanner.textContent = "Mode: View | Hold Left-Click & Drag to Pan";
+            } else if (currentTool === 'note') {
+                viewerContainer.className = "viewer-container drawing-mode";
+                drawingCanvas.style.pointerEvents = 'none';
+                annotationLayer.style.pointerEvents = 'auto';
+                tipBanner.textContent = "Mode: Sticky Note | Click inside the page to place notes";
+            } else if (currentTool === 'eraser') {
+                viewerContainer.className = "viewer-container drawing-mode";
+                drawingCanvas.style.pointerEvents = 'auto';
+                annotationLayer.style.pointerEvents = 'none';
+                tipBanner.textContent = "Mode: Eraser | Click and hold down left-click over any drawing or shape line to wipe it away";
+            } else {
+                viewerContainer.className = "viewer-container drawing-mode";
+                drawingCanvas.style.pointerEvents = 'auto';
+                annotationLayer.style.pointerEvents = 'none';
+                tipBanner.textContent = `Mode: Drawing Tool | Active Tool: ${currentTool.toUpperCase()}`;
+            }
+        });
+
+        // --- Search Engine + Chrome-Style Centering ---
+        async function performSearch(resetIndex = true) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            tab.searchInputVal = searchInput.value;
+            const query = tab.searchInputVal.trim().toLowerCase();
+            
+            if (!query || !tab.pdfDoc) {
+                tab.searchMatches = [];
+                tab.currentMatchIndex = -1;
+                searchCountSpan.textContent = "0/0";
+                redrawDrawingCanvas();
+                return;
+            }
+
+            tab.searchSessionCounter++;
+            const currentSession = tab.searchSessionCounter;
+            let temporaryMatches = [];
+
+            for (let p = 1; p <= tab.pdfDoc.numPages; p++) {
+                if (currentSession !== tab.searchSessionCounter) return;
+
+                const page = await tab.pdfDoc.getPage(p);
+                const textContent = await page.getTextContent();
+                const pageItems = textContent.items;
+
+                let aggregateText = "";
+                let charMapping = []; 
+
+                for (let i = 0; i < pageItems.length; i++) {
+                    let item = pageItems[i];
+                    for (let j = 0; j < item.str.length; j++) {
+                        aggregateText += item.str[j];
+                        charMapping.push({ itemIndex: i, charIndex: j });
+                    }
+                    aggregateText += " ";
+                    charMapping.push({ itemIndex: i, charIndex: -1 });
+                }
+
+                let startPos = 0;
+                while ((startPos = aggregateText.toLowerCase().indexOf(query, startPos)) !== -1) {
+                    let spannedItems = [];
+                    for (let k = 0; k < query.length; k++) {
+                        let mapRef = charMapping[startPos + k];
+                        if (mapRef && mapRef.charIndex !== -1) {
+                            if (!spannedItems.includes(mapRef.itemIndex)) {
+                                spannedItems.push(mapRef.itemIndex);
+                            }
+                        }
+                    }
+                    if (spannedItems.length > 0) {
+                        temporaryMatches.push({
+                            pageNum: p,
+                            itemIndices: spannedItems,
+                            firstItem: pageItems[spannedItems[0]]
+                        });
+                    }
+                    startPos += query.length;
+                }
+            }
+
+            if (currentSession !== tab.searchSessionCounter) return;
+            tab.searchMatches = temporaryMatches;
+            
+            if (resetIndex) {
+                tab.currentMatchIndex = tab.searchMatches.length > 0 ? 0 : -1;
+            } else if (tab.currentMatchIndex >= tab.searchMatches.length) {
+                tab.currentMatchIndex = tab.searchMatches.length - 1;
+            }
+
+            updateSearchUI();
+            
+            if (tab.currentMatchIndex !== -1) {
+                const targetPage = tab.searchMatches[tab.currentMatchIndex].pageNum;
+                if (targetPage !== tab.currentPage) {
+                    tab.currentPage = targetPage;
+                    await renderPage(tab.currentPage);
+                } else {
+                    redrawDrawingCanvas();
+                }
+                if (resetIndex) {
+                    autoCenterOnMatch();
+                }
+            } else {
+                redrawDrawingCanvas();
+            }
+        }
+
+        function updateSearchUI() {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            if (tab.searchMatches.length === 0) {
+                searchCountSpan.textContent = "0/0";
+                tab.currentMatchIndex = -1;
+            } else {
+                searchCountSpan.textContent = `${tab.currentMatchIndex + 1}/${tab.searchMatches.length}`;
+            }
+        }
+
+        function autoCenterOnMatch() {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.currentMatchIndex === -1 || !tab.searchMatches[tab.currentMatchIndex] || !tab.currentViewport) return;
+            
+            const match = tab.searchMatches[tab.currentMatchIndex];
+            if (match.pageNum !== tab.currentPage) return;
+
+            const item = match.firstItem;
+            const geom = item.transform;
+            const a = geom[0], b = geom[1], c = geom[2], d = geom[3], e = geom[4], f = geom[5];
+            const sx = Math.hypot(a, b) || 1;
+            const localWidth = item.width / sx;
+            const localHeight = 1;
+            
+            const localCenterX = localWidth / 2;
+            const localCenterY = localHeight / 2;
+            
+            const pdfCenterX = a * localCenterX + c * localCenterY + e;
+            const pdfCenterY = b * localCenterX + d * localCenterY + f;
+            
+            const viewPoint = tab.currentViewport.convertToViewportPoint(pdfCenterX, pdfCenterY);
+            
+            tab.panX = (canvas.width / 2) - viewPoint[0];
+            tab.panY = (canvas.height / 2) - viewPoint[1];
+            
+            pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+        }
+
+        searchInput.addEventListener('input', () => performSearch(true));
+        
+        btnSearchNext.addEventListener('click', async () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.searchMatches.length === 0) return;
+            tab.currentMatchIndex = (tab.currentMatchIndex + 1) % tab.searchMatches.length;
+            updateSearchUI();
+            
+            const targetPage = tab.searchMatches[tab.currentMatchIndex].pageNum;
+            if (targetPage !== tab.currentPage) {
+                tab.currentPage = targetPage;
+                await renderPage(tab.currentPage);
+            } else {
+                redrawDrawingCanvas();
+            }
+            autoCenterOnMatch();
+        });
+
+        btnSearchPrev.addEventListener('click', async () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || tab.searchMatches.length === 0) return;
+            tab.currentMatchIndex = (tab.currentMatchIndex - 1 + tab.searchMatches.length) % tab.searchMatches.length;
+            updateSearchUI();
+            
+            const targetPage = tab.searchMatches[tab.currentMatchIndex].pageNum;
+            if (targetPage !== tab.currentPage) {
+                tab.currentPage = targetPage;
+                await renderPage(tab.currentPage);
+            } else {
+                redrawDrawingCanvas();
+            }
+            autoCenterOnMatch();
+        });
+
+        // --- Vector Paint Render Operations ---
+        function redrawDrawingCanvas() {
+            dCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.currentViewport) return;
+
+            // DRAW STITCHED HIGHLIGHT POLYGONS 
+            tab.searchMatches.forEach((match, idx) => {
+                if (match.pageNum !== tab.currentPage) return;
+
+                dCtx.fillStyle = (idx === tab.currentMatchIndex) ? 'rgba(255, 102, 0, 0.55)' : 'rgba(255, 230, 0, 0.45)';
+                
+                match.itemIndices.forEach(itemIdx => {
+                    let item = tab.currentPageItems[itemIdx];
+                    if (!item) return;
+
+                    let geom = item.transform;
+                    let a = geom[0], b = geom[1], c = geom[2], d = geom[3], e = geom[4], f = geom[5];
+                    let sx = Math.hypot(a, b) || 1;
+                    let localWidth = item.width / sx;
+                    let localHeight = 1;
+
+                    let x1 = e;
+                    let y1 = f;
+                    let x2 = a * localWidth + e;
+                    let y2 = b * localWidth + f;
+                    let x3 = a * localWidth + c * localHeight + e;
+                    let y3 = b * localWidth + d * localHeight + f;
+                    let x4 = c * localHeight + e;
+                    let y4 = d * localHeight + f;
+
+                    let p1 = tab.currentViewport.convertToViewportPoint(x1, y1);
+                    let p2 = tab.currentViewport.convertToViewportPoint(x2, y2);
+                    let p3 = tab.currentViewport.convertToViewportPoint(x3, y3);
+                    let p4 = tab.currentViewport.convertToViewportPoint(x4, y4);
+
+                    dCtx.beginPath();
+                    dCtx.moveTo(p1[0], p1[1]);
+                    dCtx.lineTo(p2[0], p2[1]);
+                    dCtx.lineTo(p3[0], p3[1]);
+                    dCtx.lineTo(p4[0], p4[1]);
+                    dCtx.closePath();
+                    dCtx.fill();
+                });
+            });
+
+            // RENDER USER ANNOTATIONS & DRAWINGS
+            const pageDrawings = tab.drawingsData.filter(d => d.page === tab.currentPage);
+            
+            const drawItem = (draw) => {
+                dCtx.strokeStyle = draw.color;
+                dCtx.fillStyle = draw.color;
+                
+                dCtx.lineWidth = draw.thickness; 
+                dCtx.lineCap = 'round';
+                dCtx.lineJoin = 'round';
+
+                if (draw.type === 'pen' && draw.points.length > 0) {
+                    dCtx.beginPath();
+                    const p0 = tab.currentViewport.convertToViewportPoint(draw.points[0].pdfX, draw.points[0].pdfY);
+                    dCtx.moveTo(p0[0], p0[1]);
+                    for (let i = 1; i < draw.points.length; i++) {
+                        const p = tab.currentViewport.convertToViewportPoint(draw.points[i].pdfX, draw.points[i].pdfY);
+                        dCtx.lineTo(p[0], p[1]);
+                    }
+                    dCtx.stroke();
+                } else if (draw.type === 'rect') {
+                    const p1 = tab.currentViewport.convertToViewportPoint(draw.pdfX1, draw.pdfY1);
+                    const p2 = tab.currentViewport.convertToViewportPoint(draw.pdfX2, draw.pdfY2);
+                    dCtx.beginPath();
+                    dCtx.rect(p1[0], p1[1], p2[0] - p1[0], p2[1] - p1[1]);
+                    dCtx.stroke();
+                } else if (draw.type === 'circle') {
+                    const p1 = tab.currentViewport.convertToViewportPoint(draw.pdfX1, draw.pdfY1);
+                    const p2 = tab.currentViewport.convertToViewportPoint(draw.pdfX2, draw.pdfY2);
+                    const radius = Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
+                    dCtx.beginPath();
+                    dCtx.arc(p1[0], p1[1], radius, 0, 2 * Math.PI);
+                    dCtx.stroke();
+                } else if (draw.type === 'text') {
+                    const p = tab.currentViewport.convertToViewportPoint(draw.pdfX, draw.pdfY);
+                    const calculatedFontSize = Math.max(8, draw.fontSize * tab.currentScale);
+                    dCtx.font = `bold ${calculatedFontSize}px 'Segoe UI', sans-serif`;
+                    dCtx.fillText(draw.text, p[0], p[1]);
+                }
+            };
+
+            pageDrawings.forEach(drawItem);
+            if (currentDrawingItem) drawItem(currentDrawingItem);
+        }
+
+        // --- Target Object Eraser System ---
+        function eraseElementsAt(mx, my) {
+            const clickToleranceRadius = 16; 
+            let historyMatrixMutated = false;
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+
+            tab.drawingsData = tab.drawingsData.filter(draw => {
+                if (draw.page !== tab.currentPage) return true;
+
+                if (draw.type === 'pen') {
+                    for (let i = 0; i < draw.points.length; i++) {
+                        const pt = tab.currentViewport.convertToViewportPoint(draw.points[i].pdfX, draw.points[i].pdfY);
+                        if (Math.hypot(pt[0] - mx, pt[1] - my) <= clickToleranceRadius) {
+                            historyMatrixMutated = true;
+                            return false; 
+                        }
+                    }
+                } else if (draw.type === 'rect') {
+                    const p1 = tab.currentViewport.convertToViewportPoint(draw.pdfX1, draw.pdfY1);
+                    const p2 = tab.currentViewport.convertToViewportPoint(draw.pdfX2, draw.pdfY2);
+                    const left = Math.min(p1[0], p2[0]), right = Math.max(p1[0], p2[0]);
+                    const top = Math.min(p1[1], p2[1]), bottom = Math.max(p1[1], p2[1]);
+                    
+                    const borderHit = (Math.abs(mx - left) <= clickToleranceRadius && my >= top - clickToleranceRadius && my <= bottom + clickToleranceRadius) ||
+                                      (Math.abs(mx - right) <= clickToleranceRadius && my >= top - clickToleranceRadius && my <= bottom + clickToleranceRadius) ||
+                                      (Math.abs(my - top) <= clickToleranceRadius && mx >= left - clickToleranceRadius && mx <= right + clickToleranceRadius) ||
+                                      (Math.abs(my - bottom) <= clickToleranceRadius && mx >= left - clickToleranceRadius && mx <= right + clickToleranceRadius);
+                    
+                    if (borderHit) {
+                        historyMatrixMutated = true;
+                        return false;
+                    }
+                } else if (draw.type === 'circle') {
+                    const p1 = tab.currentViewport.convertToViewportPoint(draw.pdfX1, draw.pdfY1);
+                    const p2 = tab.currentViewport.convertToViewportPoint(draw.pdfX2, draw.pdfY2);
+                    const radius = Math.sqrt(Math.pow(p2[0] - p1[0], 2) + Math.pow(p2[1] - p1[1], 2));
+                    const currentDist = Math.hypot(p1[0] - mx, p1[1] - my);
+                    
+                    if (Math.abs(currentDist - radius) <= clickToleranceRadius || currentDist <= clickToleranceRadius) {
+                        historyMatrixMutated = true;
+                        return false;
+                    }
+                } else if (draw.type === 'text') {
+                    const pt = tab.currentViewport.convertToViewportPoint(draw.pdfX, draw.pdfY);
+                    if (Math.hypot(pt[0] - mx, pt[1] - my) <= (clickToleranceRadius + 20)) {
+                        historyMatrixMutated = true;
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            if (historyMatrixMutated) {
+                redrawDrawingCanvas();
+            }
+        }
+
+        // --- Design Board Core Activity Process Tracking ---
+        drawingCanvas.addEventListener('mousedown', (e) => {
+            if (currentTool === 'view' || currentTool === 'note') return;
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pdfDoc) return;
+            
+            const rect = drawingCanvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            if (currentTool === 'eraser') {
+                isDrawing = true;
+                eraseElementsAt(clickX, clickY);
+                return;
+            }
+
+            isDrawing = true;
+            const pdfPoint = tab.currentViewport.convertToPdfPoint(clickX, clickY);
+            const chosenColor = editColor.value;
+            const chosenThickness = parseFloat(editThickness.value);
+
+            if (currentTool === 'pen') {
+                currentDrawingItem = {
+                    type: 'pen',
+                    page: tab.currentPage,
+                    color: chosenColor,
+                    thickness: chosenThickness,
+                    points: [{ pdfX: pdfPoint[0], pdfY: pdfPoint[1] }]
+                };
+            } else if (currentTool === 'rect' || currentTool === 'circle') {
+                currentDrawingItem = {
+                    type: currentTool,
+                    page: tab.currentPage,
+                    color: chosenColor,
+                    thickness: chosenThickness,
+                    pdfX1: pdfPoint[0],
+                    pdfY1: pdfPoint[1],
+                    pdfX2: pdfPoint[0],
+                    pdfY2: pdfPoint[1]
+                };
+            } else if (currentTool === 'text') {
+                isDrawing = false;
+                setTimeout(() => {
+                    const textString = prompt("Enter text markup to inject into this page context:");
+                    if (textString && textString.trim() !== "") {
+                        tab.drawingsData.push({
+                            type: 'text',
+                            page: tab.currentPage,
+                            color: chosenColor,
+                            thickness: chosenThickness,
+                            fontSize: 14, 
+                            pdfX: pdfPoint[0],
+                            pdfY: pdfPoint[1],
+                            text: textString
+                        });
+                        redrawDrawingCanvas();
+                    }
+                }, 20);
+            }
+        });
+
+        drawingCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+
+            const rect = drawingCanvas.getBoundingClientRect();
+            const moveX = e.clientX - rect.left;
+            const moveY = e.clientY - rect.top;
+
+            if (currentTool === 'eraser') {
+                eraseElementsAt(moveX, moveY);
+                return;
+            }
+
+            if (!currentDrawingItem) return;
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            const pdfPoint = tab.currentViewport.convertToPdfPoint(moveX, moveY);
+
+            if (currentTool === 'pen') {
+                currentDrawingItem.points.push({ pdfX: pdfPoint[0], pdfY: pdfPoint[1] });
+            } else if (currentTool === 'rect' || currentTool === 'circle') {
+                currentDrawingItem.pdfX2 = pdfPoint[0];
+                currentDrawingItem.pdfY2 = pdfPoint[1];
+            }
+            redrawDrawingCanvas();
+        });
+
+        drawingCanvas.addEventListener('mouseup', () => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (currentDrawingItem) {
+                const tab = tabs.find(t => t.id === activeTabId);
+                if (tab) tab.drawingsData.push(currentDrawingItem);
+                currentDrawingItem = null;
+            }
+            redrawDrawingCanvas();
+        });
+
+        btnClearDrawings.addEventListener('click', () => {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            if (confirm("Wipe all drawn graphic configurations and annotations on this active page view?")) {
+                tab.drawingsData = tab.drawingsData.filter(d => d.page !== tab.currentPage);
+                redrawDrawingCanvas();
+            }
+        });
+
+        // --- Sticky Annotation Boxes Processing Layers ---
+        annotationLayer.addEventListener('click', async (e) => {
+            if (currentTool !== 'note' || e.target.closest('.note-box')) return;
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pdfDoc) return;
+
+            const rect = annotationLayer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const pdfPoint = tab.currentViewport.convertToPdfPoint(clickX, clickY);
+
+            const newNote = {
+                id: Date.now(),
+                page: tab.currentPage,
+                pdfX: pdfPoint[0],
+                pdfY: pdfPoint[1],
+                text: ""
+            };
+
+            tab.notesData.push(newNote);
+            renderNotes(tab.currentViewport);
+            
+            toolSelect.value = 'view';
+            toolSelect.dispatchEvent(new Event('change'));
+        });
+
+        function renderNotes(viewport) {
+            annotationLayer.innerHTML = '';
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            const pageNotes = tab.notesData.filter(note => note.page === tab.currentPage);
+
+            pageNotes.forEach(note => {
+                const viewPoint = viewport.convertToViewportPoint(note.pdfX, note.pdfY);
+                const noteElement = document.createElement('div');
+                noteElement.className = 'note-box';
+                noteElement.style.left = `${viewPoint[0]}px`;
+                noteElement.style.top = `${viewPoint[1]}px`;
+                noteElement.dataset.id = note.id;
+
+                noteElement.innerHTML = `
+                    <div class="note-header"><span class="note-pin">📌 Note</span><button class="note-close">&times;</button></div>
+                    <textarea class="note-textarea" placeholder="Type comments here...">${note.text}</textarea>
+                `;
+
+                noteElement.querySelector('.note-textarea').addEventListener('input', (e) => {
+                    note.text = e.target.value;
+                });
+
+                noteElement.querySelector('.note-close').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    tab.notesData = tab.notesData.filter(n => n.id !== note.id);
+                    noteElement.remove();
+                });
+
+                setupDrag(noteElement, note, viewport);
+                annotationLayer.appendChild(noteElement);
+            });
+        }
+
+        function setupDrag(el, noteObj, viewport) {
+            let dragStartX = 0, dragStartY = 0;
+            el.querySelector('.note-header').addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                
+                const elementDrag = (e) => {
+                    e.preventDefault();
+                    const deltaX = e.clientX - dragStartX;
+                    const deltaY = e.clientY - dragStartY;
+                    dragStartX = e.clientX;
+                    dragStartY = e.clientY;
+
+                    const newLeft = el.offsetLeft + deltaX;
+                    const newTop = el.offsetTop + deltaY;
+                    el.style.left = `${newLeft}px`;
+                    el.style.top = `${newTop}px`;
+
+                    const pdfPoint = viewport.convertToPdfPoint(newLeft, newTop);
+                    noteObj.pdfX = pdfPoint[0];
+                    noteObj.pdfY = pdfPoint[1];
+                };
+
+                const closeDragElement = () => {
+                    document.removeEventListener('mouseup', closeDragElement);
+                    document.removeEventListener('mousemove', elementDrag);
+                };
+
+                document.addEventListener('mouseup', closeDragElement);
+                document.addEventListener('mousemove', elementDrag);
+            });
+        }
+
+        // --- JSON Backup Session Save & Load Router Manager ---
+        sessionSelect.addEventListener('change', async (e) => {
+            const flowAction = e.target.value;
+            sessionSelect.value = ""; 
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+            
+            if (flowAction === 'export') {
+                if (tab.notesData.length === 0 && tab.drawingsData.length === 0) {
+                    alert("No edits or annotations found on this document project yet.");
+                    return;
+                }
+                
+                let userSpecifiedName = prompt("Enter a filename for your project session backup:", "my_pdf_workspace_session");
+                
+                if (userSpecifiedName === null) return; 
+                userSpecifiedName = userSpecifiedName.trim();
+                if (userSpecifiedName === "") userSpecifiedName = "pdf_workspace_session";
+                if (!userSpecifiedName.toLowerCase().endsWith(".json")) userSpecifiedName += ".json";
+                
+                const dataBundle = {
+                    version: "1.4",
+                    exportedAt: new Date().toISOString(),
+                    notes: tab.notesData,
+                    drawings: tab.drawingsData
+                };
+
+                const jsonString = JSON.stringify(dataBundle, null, 2);
+
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: userSpecifiedName,
+                            types: [{
+                                description: 'JSON Session Document',
+                                accept: { 'application/json': ['.json'] }
+                              }]
+                        });
+                        const writable = await handle.createWritable();
+                        await writable.write(jsonString);
+                        await writable.close();
+                        return; 
+                    } catch (err) {
+                        if (err.name === 'AbortError') return; 
+                        console.warn("Save API failed, using standard fallback download pipeline.", err);
+                    }
+                }
+                
+                const fileBlob = new Blob([jsonString], { type: "application/json" });
+                const downloadLink = document.createElement('a');
+                
+                downloadLink.href = URL.createObjectURL(fileBlob);
+                downloadLink.download = userSpecifiedName;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+            } else if (flowAction === 'import') {
+                sessionFilePicker.click();
+            }
+        });
+
+        sessionFilePicker.addEventListener('change', (e) => {
+            const targetedJsonFile = e.target.files[0];
+            if (!targetedJsonFile) return;
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab) return;
+
+            const fileReader = new FileReader();
+            fileReader.onload = function(evt) {
+                try {
+                    const parsedProjectBundle = JSON.parse(evt.target.result);
+                    
+                    if (parsedProjectBundle.notes && parsedProjectBundle.drawings) {
+                        tab.notesData = parsedProjectBundle.notes;
+                        tab.drawingsData = parsedProjectBundle.drawings;
+                        
+                        alert("Project markup configurations imported successfully!");
+                        if (tab.currentViewport) {
+                            renderPage(tab.currentPage);
+                        }
+                    } else {
+                        alert("Invalid session file schema.");
+                    }
+                } catch (err) {
+                    alert("Failed to parse structural JSON elements: " + err.message);
+                }
+            };
+            fileReader.readAsText(targetedJsonFile);
+            sessionFilePicker.value = ""; 
+        });
+
+        // Initialize Workspace onto tab 1 on bootup load
+        switchTab(0);
+    </script>
+</body>
+</html>

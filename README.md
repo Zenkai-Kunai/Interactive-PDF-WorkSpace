@@ -5,6 +5,7 @@ Stop just reading PDFs—start interacting with them! Interactive PDF WorkSpace 
 Everything runs locally in your browser, meaning your documents stay completely private.
 
 🌟 [Try the Live Workspace Here] (https://zenkai-kunai.github.io/Interactive-PDF-WorkSpace/) 🌟
+
 ✨ Features That Make It Awesome
 
 📑 Browser-Style Tab Management: Open multiple PDFs at once! Switch between documents seamlessly, open new tabs, and close them when you're done—just like your favorite web browser.

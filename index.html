@@ -204,7 +204,7 @@
         }
 
         .line-numbers {
-            width: 40px;
+            min-width: 40px;
             padding: 12px 0;
             background-color: #21212b;
             color: #505068;
@@ -585,7 +585,7 @@
                     <input type="file" id="text-file-selector" accept=".txt, .log, .file" style="display: none;">
                 </div>
             </div>
-            <div class="notepad-editor-wrapper">
+            <div class="notepad-editor-wrapper" id="notepad-editor-wrapper">
                 <div class="line-numbers" id="line-numbers">1</div>
                 <textarea class="notepad-textarea" id="notepad-textarea" placeholder="Open a .txt, .log, or .file to view, or type your notes here..." spellcheck="false"></textarea>
             </div>
@@ -715,6 +715,7 @@
         const btnSaveText = document.getElementById('btn-save-text');
         const btnClearText = document.getElementById('btn-clear-text');
         const textFileSelector = document.getElementById('text-file-selector');
+        const notepadEditorWrapper = document.getElementById('notepad-editor-wrapper');
         const notepadTextarea = document.getElementById('notepad-textarea');
         const lineNumbers = document.getElementById('line-numbers');
         const notepadFilename = document.getElementById('notepad-filename');
@@ -764,8 +765,43 @@
             }
         });
 
-        // --- Notepad Core Operations Engine ---
+        // --- Notepad Core Operations Engine & Zoom Feature ---
         let loadedTextFileName = "Untitled.txt";
+        let currentNotepadFontSize = 13;
+        let isLeftCtrlPressed = false;
+
+        // Monitor purely for Left Control Key
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'ControlLeft') {
+                isLeftCtrlPressed = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ControlLeft') {
+                isLeftCtrlPressed = false;
+            }
+        });
+
+        // Apply Zoom explicitly to the Notepad Editor area
+        notepadEditorWrapper.addEventListener('wheel', (e) => {
+            if (isLeftCtrlPressed && e.ctrlKey) {
+                // Prevent browser-level zoom execution
+                e.preventDefault();
+
+                if (e.deltaY < 0) {
+                    // Scrolling up increases font size
+                    currentNotepadFontSize = Math.min(currentNotepadFontSize + 1, 48); // Max 48px
+                } else {
+                    // Scrolling down decreases font size
+                    currentNotepadFontSize = Math.max(currentNotepadFontSize - 1, 8); // Min 8px
+                }
+
+                // Apply style changes inline to match
+                notepadTextarea.style.fontSize = `${currentNotepadFontSize}px`;
+                lineNumbers.style.fontSize = `${currentNotepadFontSize}px`;
+            }
+        }, { passive: false });
 
         btnOpenText.addEventListener('click', async () => {
             if ('showOpenFilePicker' in window) {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive PDF & Notepad Workspace</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
     <style>
         * {
             box-sizing: border-box;
@@ -371,11 +372,10 @@
             justify-content: center;
             align-items: center;
             padding: 30px;
-            cursor: grab;
-            user-select: none;
+            cursor: auto;
         }
 
-        .viewer-container.panning { cursor: grabbing; }
+        .viewer-container.panning { cursor: grabbing !important; }
         .viewer-container.drawing-mode { cursor: crosshair; }
 
         /* Page Wrapper */
@@ -390,6 +390,24 @@
 
         canvas {
             display: block;
+        }
+
+        .textLayer {
+            position: absolute;
+            text-align: initial;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 1;
+            line-height: 1.0;
+            z-index: 4;
+            pointer-events: auto;
+        }
+
+        .textLayer ::selection {
+            background: rgba(98, 0, 238, 0.3);
         }
 
         #drawing-canvas {
@@ -549,7 +567,7 @@
 
         <div class="toolbar-group">
             <select id="tool-select" class="btn" disabled style="min-width: 170px;">
-                <option value="view">✋ Mode: Pan / View</option>
+                <option value="view">✋ Select Text / Right-Click Pan</option>
                 <option value="note">📌 Tool: Sticky Note</option>
                 <option value="pen">✏️ Tool: Brush Pen</option>
                 <option value="rect">⬛ Tool: Box Shape</option>
@@ -623,12 +641,13 @@
 
                 <div class="page-wrapper" id="page-wrapper">
                     <canvas id="pdf-canvas"></canvas>
+                    <div class="textLayer" id="text-layer"></div>
                     <canvas id="drawing-canvas"></canvas>
                     <div class="annotation-layer" id="annotation-layer"></div>
                 </div>
             </div>
 
-            <div class="tip-banner" id="tip-banner">Mode: View | Hold Left-Click & Drag to Pan</div>
+            <div class="tip-banner" id="tip-banner">Select Text with Left-Click | Hold Right-Click & Drag to Pan</div>
         </div>
     </div>
 
@@ -701,6 +720,7 @@
         const viewerContainer = document.getElementById('viewer-container');
         const pageWrapper = document.getElementById('page-wrapper');
         const canvas = document.getElementById('pdf-canvas');
+        const textLayer = document.getElementById('text-layer');
         const drawingCanvas = document.getElementById('drawing-canvas');
         const annotationLayer = document.getElementById('annotation-layer');
         
@@ -726,6 +746,9 @@
         const resizer = document.getElementById('resizer');
         const notepadPanel = document.getElementById('notepad-panel');
         const splitContainer = document.getElementById('split-container');
+
+        // Prevent Default Context Menu on PDF Workspace for Right-Click Panning
+        viewerContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
         // --- Resizable Split-Screen Divider Engine ---
         let isResizing = false;
@@ -1028,6 +1051,7 @@
                 disabledElements.forEach(el => el.disabled = true);
 
                 dCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                textLayer.innerHTML = '';
                 annotationLayer.innerHTML = '';
             }
         }
@@ -1138,15 +1162,27 @@
 
             const renderContext = { canvasContext: ctx, viewport: tab.currentViewport };
             await page.render(renderContext).promise;
+
+            // Render text layer for selecting and copying text
+            textLayer.innerHTML = '';
+            textLayer.style.width = `${tab.currentViewport.width}px`;
+            textLayer.style.height = `${tab.currentViewport.height}px`;
             
+            const textContent = await page.getTextContent();
+            tab.currentPageItems = textContent.items;
+
+            pdfjsLib.renderTextLayer({
+                textContentSource: textContent,
+                container: textLayer,
+                viewport: tab.currentViewport,
+                textDivs: []
+            });
+
             pageInfo.textContent = `Page: ${num} / ${tab.pdfDoc.numPages}`;
             zoomInfo.textContent = `${Math.round(tab.currentScale * 100)}%`;
             
             btnPrev.disabled = (num <= 1);
             btnNext.disabled = (num >= tab.pdfDoc.numPages);
-            
-            const textContent = await page.getTextContent();
-            tab.currentPageItems = textContent.items;
             
             redrawDrawingCanvas();
             renderNotes(tab.currentViewport);
@@ -1230,17 +1266,20 @@
             renderPage(tab.currentPage);
         });
 
-        viewerContainer.addEventListener('mousedown', (e) => {
-            if (currentTool !== 'view') return;
-            isPanning = true;
-            viewerContainer.classList.add('panning');
-            const tab = tabs.find(t => t.id === activeTabId);
-            if (!tab) return;
-            startX = e.clientX - tab.panX;
-            startY = e.clientY - tab.panY;
+        // Global Mouse Events for Right-Click Panning
+        window.addEventListener('mousedown', (e) => {
+            // e.button === 2 corresponds to Right-Click
+            if (e.button === 2 && viewerContainer.contains(e.target)) {
+                isPanning = true;
+                viewerContainer.classList.add('panning');
+                const tab = tabs.find(t => t.id === activeTabId);
+                if (!tab) return;
+                startX = e.clientX - tab.panX;
+                startY = e.clientY - tab.panY;
+            }
         });
 
-        viewerContainer.addEventListener('mousemove', (e) => {
+        window.addEventListener('mousemove', (e) => {
             if (!isPanning) return;
             e.preventDefault();
             const tab = tabs.find(t => t.id === activeTabId);
@@ -1250,32 +1289,37 @@
             pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
         });
 
-        const stopPanning = () => {
-            isPanning = false;
-            viewerContainer.classList.remove('panning');
+        const stopPanning = (e) => {
+            if (isPanning) {
+                isPanning = false;
+                viewerContainer.classList.remove('panning');
+            }
         };
-        viewerContainer.addEventListener('mouseup', stopPanning);
-        viewerContainer.addEventListener('mouseleave', stopPanning);
+        window.addEventListener('mouseup', stopPanning);
 
         toolSelect.addEventListener('change', (e) => {
             currentTool = e.target.value;
             if (currentTool === 'view') {
                 viewerContainer.className = "viewer-container";
+                textLayer.style.pointerEvents = 'auto';
                 drawingCanvas.style.pointerEvents = 'none';
                 annotationLayer.style.pointerEvents = 'none';
-                tipBanner.textContent = "Mode: View | Hold Left-Click & Drag to Pan";
+                tipBanner.textContent = "Select Text with Left-Click | Hold Right-Click & Drag to Pan";
             } else if (currentTool === 'note') {
                 viewerContainer.className = "viewer-container drawing-mode";
+                textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'none';
                 annotationLayer.style.pointerEvents = 'auto';
                 tipBanner.textContent = "Mode: Sticky Note | Click inside the page to place notes";
             } else if (currentTool === 'eraser') {
                 viewerContainer.className = "viewer-container drawing-mode";
+                textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'auto';
                 annotationLayer.style.pointerEvents = 'none';
                 tipBanner.textContent = "Mode: Eraser | Click and hold down left-click over any drawing or shape line to wipe it away";
             } else {
                 viewerContainer.className = "viewer-container drawing-mode";
+                textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'auto';
                 annotationLayer.style.pointerEvents = 'none';
                 tipBanner.textContent = `Mode: Drawing Tool | Active Tool: ${currentTool.toUpperCase()}`;
@@ -1588,7 +1632,7 @@
         }
 
         drawingCanvas.addEventListener('mousedown', (e) => {
-            if (currentTool === 'view' || currentTool === 'note') return;
+            if (currentTool === 'view' || currentTool === 'note' || e.button === 2) return;
             const tab = tabs.find(t => t.id === activeTabId);
             if (!tab || !tab.pdfDoc) return;
             
@@ -1694,7 +1738,7 @@
         });
 
         annotationLayer.addEventListener('click', async (e) => {
-            if (currentTool !== 'note' || e.target.closest('.note-box')) return;
+            if (currentTool !== 'note' || e.target.closest('.note-box') || e.button === 2) return;
             const tab = tabs.find(t => t.id === activeTabId);
             if (!tab || !tab.pdfDoc) return;
 
@@ -1756,6 +1800,7 @@
         function setupDrag(el, noteObj, viewport) {
             let dragStartX = 0, dragStartY = 0;
             el.querySelector('.note-header').addEventListener('mousedown', (e) => {
+                if (e.button === 2) return;
                 e.preventDefault();
                 e.stopPropagation();
                 dragStartX = e.clientX;

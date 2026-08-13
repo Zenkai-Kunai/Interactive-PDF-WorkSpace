@@ -654,6 +654,10 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+        // --- Core Directory Handles for Separate File Pickers ---
+        let lastPdfDirHandle = null;
+        let lastNotepadDirHandle = null;
+
         // --- Core Tab Management Engine State Variables ---
         let activeTabId = 0;
         let tabIdCounter = 1;
@@ -829,12 +833,21 @@
         btnOpenText.addEventListener('click', async () => {
             if ('showOpenFilePicker' in window) {
                 try {
-                    const [handle] = await window.showOpenFilePicker({
+                    const pickerOptions = {
                         types: [{
                             description: 'Text Files',
                             accept: { 'text/plain': ['.txt', '.log', '.file'] }
-                        }]
-                    });
+                        }],
+                        multiple: false
+                    };
+
+                    if (lastNotepadDirHandle) {
+                        pickerOptions.startIn = lastNotepadDirHandle;
+                    }
+
+                    const [handle] = await window.showOpenFilePicker(pickerOptions);
+                    lastNotepadDirHandle = handle;
+
                     const file = await handle.getFile();
                     processTextFile(file);
                 } catch (err) {
@@ -1071,12 +1084,21 @@
         btnOpenPdf.addEventListener('click', async () => {
             if ('showOpenFilePicker' in window) {
                 try {
-                    const [handle] = await window.showOpenFilePicker({
+                    const pickerOptions = {
                         types: [{
                             description: 'PDF Documents',
                             accept: { 'application/pdf': ['.pdf'] }
-                        }]
-                    });
+                        }],
+                        multiple: false
+                    };
+
+                    if (lastPdfDirHandle) {
+                        pickerOptions.startIn = lastPdfDirHandle;
+                    }
+
+                    const [handle] = await window.showOpenFilePicker(pickerOptions);
+                    lastPdfDirHandle = handle;
+
                     const file = await handle.getFile();
                     processPdfFile(file);
                 } catch (err) {

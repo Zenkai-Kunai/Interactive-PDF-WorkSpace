@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive PDF & Notepad Workspace</title>
+    <title>Interactive PCB PDF Workspace</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css">
     <style>
@@ -77,12 +77,6 @@
             cursor: not-allowed;
         }
 
-        .btn.active {
-            background-color: #6200ee;
-            border-color: #7c4dff;
-            color: white;
-        }
-
         select.btn {
             appearance: none;
             padding-right: 28px;
@@ -136,36 +130,15 @@
             min-width: 40px;
         }
 
-        /* Split Screen Container & Resizer */
-        .workspace-split-container {
+        /* Full PDF Workspace Container */
+        .workspace-container {
             display: flex;
+            flex-direction: column;
             flex: 1;
             width: 100%;
             height: calc(100vh - 60px);
             overflow: hidden;
             position: relative;
-        }
-
-        .notepad-panel {
-            width: 35%;
-            min-width: 250px;
-            max-width: 70%;
-            background-color: #252530;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #3a3a4a;
-        }
-
-        .resizer {
-            width: 6px;
-            background-color: #1e1e24;
-            cursor: col-resize;
-            transition: background-color 0.2s;
-            z-index: 20;
-        }
-
-        .resizer:hover, .resizer.resizing {
-            background-color: #6200ee;
         }
 
         .pdf-panel {
@@ -174,75 +147,8 @@
             flex-direction: column;
             overflow: hidden;
             position: relative;
-        }
-
-        /* Notepad Styling */
-        .notepad-toolbar {
-            background-color: #2b2b36;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #3a3a4a;
-            gap: 8px;
-        }
-
-        .notepad-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #f5f5f7;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .notepad-editor-wrapper {
-            flex: 1;
-            display: flex;
-            position: relative;
-            background-color: #1a1a22;
-            overflow: hidden;
-        }
-
-        .line-numbers {
-            min-width: 40px;
-            padding: 12px 0;
-            background-color: #21212b;
-            color: #505068;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            text-align: right;
-            padding-right: 8px;
-            user-select: none;
-            overflow: hidden;
-            border-right: 1px solid #2e2e3d;
-        }
-
-        .notepad-textarea {
-            flex: 1;
-            background-color: #1a1a22;
-            color: #d4d4d8;
-            border: none;
-            padding: 12px;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            resize: none;
-            outline: none;
-            white-space: pre;
-            overflow: auto;
-            tab-size: 4;
-        }
-
-        .notepad-statusbar {
-            background-color: #21212b;
-            padding: 4px 12px;
-            font-size: 12px;
-            color: #808095;
-            display: flex;
-            justify-content: space-between;
-            border-top: 1px solid #2e2e3d;
+            width: 100%;
+            height: 100%;
         }
 
         /* Dynamic Tabs Layout Interface */
@@ -281,19 +187,9 @@
             transition: background-color 0.2s, color 0.2s;
         }
 
-        .tab-btn:active {
-            cursor: grabbing;
-        }
-
-        .tab-btn.dragging {
-            opacity: 0.4;
-            background-color: #1a1a24;
-        }
-
-        .tab-btn:hover {
-            background-color: #3a3a4a;
-            color: #fff;
-        }
+        .tab-btn:active { cursor: grabbing; }
+        .tab-btn.dragging { opacity: 0.4; background-color: #1a1a24; }
+        .tab-btn:hover { background-color: #3a3a4a; color: #fff; }
 
         .tab-btn.active {
             background-color: #1e1e24;
@@ -306,9 +202,7 @@
         .tab-btn.active::before {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
+            top: 0; left: 0; right: 0;
             height: 3px;
             background-color: #6200ee;
         }
@@ -388,17 +282,12 @@
             will-change: transform;
         }
 
-        canvas {
-            display: block;
-        }
+        canvas { display: block; }
 
         .textLayer {
             position: absolute;
             text-align: initial;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            top: 0; left: 0; right: 0; bottom: 0;
             overflow: hidden;
             opacity: 1;
             line-height: 1.0;
@@ -406,26 +295,20 @@
             pointer-events: auto;
         }
 
-        .textLayer ::selection {
-            background: rgba(98, 0, 238, 0.3);
-        }
+        .textLayer ::selection { background: rgba(98, 0, 238, 0.3); }
 
         #drawing-canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 5;
             pointer-events: none;
         }
 
         .annotation-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 6;
             pointer-events: none;
         }
@@ -486,19 +369,83 @@
             font-family: inherit;
         }
 
+        /* Top Right PCB Mini Map Container */
+        .minimap-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 220px;
+            height: 160px;
+            background-color: rgba(33, 33, 43, 0.92);
+            border: 2px solid #4a4a5a;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            backdrop-filter: blur(6px);
+        }
+
+        .minimap-header {
+            background-color: #2b2b36;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #a0a0b0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3a3a4a;
+        }
+
+        .minimap-badge {
+            background-color: #6200ee;
+            color: #fff;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .minimap-body {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #121216;
+            cursor: crosshair;
+        }
+
+        #minimap-canvas {
+            display: block;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+
+        .minimap-viewport-box {
+            position: absolute;
+            border: 2px solid #ff3b30;
+            background-color: rgba(255, 59, 48, 0.25);
+            box-shadow: 0 0 8px rgba(255, 59, 48, 0.6);
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
         /* Placeholder */
         .placeholder {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             text-align: center;
             color: #707080;
         }
 
         .placeholder svg {
-            width: 64px;
-            height: 64px;
+            width: 64px; height: 64px;
             fill: currentColor;
             margin-bottom: 16px;
         }
@@ -589,34 +536,8 @@
         </div>
     </div>
 
-    <!-- Workspace Split Container -->
-    <div class="workspace-split-container" id="split-container">
-        
-        <!-- Left Side: Notepad Panel -->
-        <div class="notepad-panel" id="notepad-panel">
-            <div class="notepad-toolbar">
-                <span class="notepad-title" id="notepad-filename">📝 Notepad</span>
-                <div style="display: flex; gap: 6px;">
-                    <button class="btn" id="btn-open-text" title="Open Text/Log File" style="padding: 4px 10px; font-size: 12px;">📂 Open</button>
-                    <button class="btn" id="btn-save-text" title="Save File" style="padding: 4px 10px; font-size: 12px;">💾 Save</button>
-                    <button class="btn" id="btn-clear-text" title="Clear Notepad" style="padding: 4px 8px; font-size: 12px; color: #ff3b30;">🗑️</button>
-                    <input type="file" id="text-file-selector" accept=".txt, .log, .file" style="display: none;">
-                </div>
-            </div>
-            <div class="notepad-editor-wrapper" id="notepad-editor-wrapper">
-                <div class="line-numbers" id="line-numbers">1</div>
-                <textarea class="notepad-textarea" id="notepad-textarea" placeholder="Open a .txt, .log, or .file to view, or type your notes here..." spellcheck="false"></textarea>
-            </div>
-            <div class="notepad-statusbar">
-                <span id="notepad-file-type">Plain Text</span>
-                <span id="notepad-stats">Lines: 1 | Words: 0 | Chars: 0</span>
-            </div>
-        </div>
-
-        <!-- Draggable Resizer Bar -->
-        <div class="resizer" id="resizer"></div>
-
-        <!-- Right Side: PDF Workspace Panel -->
+    <!-- Main Workspace Container -->
+    <div class="workspace-container">
         <div class="pdf-panel">
             <!-- Dynamic Tab Bar Header -->
             <div class="tab-bar" id="tab-bar">
@@ -645,20 +566,30 @@
                     <canvas id="drawing-canvas"></canvas>
                     <div class="annotation-layer" id="annotation-layer"></div>
                 </div>
+
+                <!-- Top Right Auto-Cropped PCB Mini Map -->
+                <div class="minimap-container" id="minimap-container">
+                    <div class="minimap-header">
+                        <span>🗺️ Mini Map</span>
+                        <span class="minimap-badge">PCB Auto-Fit</span>
+                    </div>
+                    <div class="minimap-body" id="minimap-body">
+                        <canvas id="minimap-canvas"></canvas>
+                        <div class="minimap-viewport-box" id="minimap-viewport-box"></div>
+                    </div>
+                </div>
             </div>
 
-            <div class="tip-banner" id="tip-banner">Select Text with Left-Click | Hold Right-Click & Drag to Pan</div>
+            <div class="tip-banner" id="tip-banner">Use Mouse Scroller to Zoom | Right-Click Drag to Pan | Drag Red Box on Mini Map</div>
         </div>
     </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // --- Core Directory Handles for Separate File Pickers ---
         let lastPdfDirHandle = null;
-        let lastNotepadDirHandle = null;
 
-        // --- Core Tab Management Engine State Variables ---
+        // Core Tab Management State
         let activeTabId = 0;
         let tabIdCounter = 1;
         let draggedTabId = null;
@@ -680,21 +611,25 @@
                 searchMatches: [],
                 currentMatchIndex: -1,
                 searchSessionCounter: 0,
-                searchInputVal: ""
+                searchInputVal: "",
+                pcbCropBox: null 
             };
         }
 
-        // Initialize with exactly 1 dynamic tab instance
         let tabs = [createNewTabObject(0, "Tab 1 (Empty)")];
 
-        // Shared Tool Workspace Properties
+        // Shared Tool Properties
         let currentTool = 'view'; 
         let isPanning = false;
         let startX = 0, startY = 0;
         let isDrawing = false;
         let currentDrawingItem = null;
 
-        // DOM Elements Link
+        // Safe Zoom Limits
+        const MIN_ZOOM = 0.25;
+        const MAX_ZOOM = 30.00;
+
+        // DOM Elements
         const btnOpenPdf = document.getElementById('btn-open-pdf');
         const fileSelector = document.getElementById('file-selector');
         const sessionSelect = document.getElementById('session-select');
@@ -727,227 +662,235 @@
         const textLayer = document.getElementById('text-layer');
         const drawingCanvas = document.getElementById('drawing-canvas');
         const annotationLayer = document.getElementById('annotation-layer');
+
+        // Minimap DOM Elements
+        const minimapContainer = document.getElementById('minimap-container');
+        const minimapBody = document.getElementById('minimap-body');
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const minimapViewportBox = document.getElementById('minimap-viewport-box');
         
         const ctx = canvas.getContext('2d');
         const dCtx = drawingCanvas.getContext('2d');
+        const mCtx = minimapCanvas.getContext('2d');
         
         const tabsWrapper = document.getElementById('tabs-wrapper');
         const btnAddTab = document.getElementById('btn-add-tab');
 
-        // Notepad Elements
-        const btnOpenText = document.getElementById('btn-open-text');
-        const btnSaveText = document.getElementById('btn-save-text');
-        const btnClearText = document.getElementById('btn-clear-text');
-        const textFileSelector = document.getElementById('text-file-selector');
-        const notepadEditorWrapper = document.getElementById('notepad-editor-wrapper');
-        const notepadTextarea = document.getElementById('notepad-textarea');
-        const lineNumbers = document.getElementById('line-numbers');
-        const notepadFilename = document.getElementById('notepad-filename');
-        const notepadFileType = document.getElementById('notepad-file-type');
-        const notepadStats = document.getElementById('notepad-stats');
-        
-        // Resizer Elements
-        const resizer = document.getElementById('resizer');
-        const notepadPanel = document.getElementById('notepad-panel');
-        const splitContainer = document.getElementById('split-container');
-
-        // Prevent Default Context Menu on PDF Workspace for Right-Click Panning
+        // Prevent Default Context Menu on PDF Workspace
         viewerContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        // --- Resizable Split-Screen Divider Engine ---
-        let isResizing = false;
+        // --- PCB Bounding Box Auto-Detection Algorithm ---
+        function detectPcbBounds(sourceCanvas) {
+            const w = sourceCanvas.width;
+            const h = sourceCanvas.height;
+            if (w === 0 || h === 0) return { left: 0, top: 0, width: w, height: h };
 
-        resizer.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            resizer.classList.add('resizing');
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-        });
+            // Sample onto a small matrix for fast processing
+            const maxDim = 300;
+            const scale = Math.min(1, maxDim / Math.max(w, h));
+            const sw = Math.floor(w * scale);
+            const sh = Math.floor(h * scale);
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const containerRect = splitContainer.getBoundingClientRect();
-            let newWidth = e.clientX - containerRect.left;
-            
-            // Constrain panel bounds
-            const minWidth = 200;
-            const maxWidth = containerRect.width * 0.75;
-            
-            if (newWidth < minWidth) newWidth = minWidth;
-            if (newWidth > maxWidth) newWidth = maxWidth;
-            
-            notepadPanel.style.width = `${newWidth}px`;
-        });
+            const tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = sw;
+            tmpCanvas.height = sh;
+            const tmpCtx = tmpCanvas.getContext('2d');
+            tmpCtx.drawImage(sourceCanvas, 0, 0, sw, sh);
 
-        document.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                resizer.classList.remove('resizing');
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                
-                // Trigger PDF Canvas refresh to fit new dimensions dynamically
-                const tab = tabs.find(t => t.id === activeTabId);
-                if (tab && tab.pdfDoc) renderPage(tab.currentPage);
-            }
-        });
+            const imgData = tmpCtx.getImageData(0, 0, sw, sh);
+            const data = imgData.data;
 
-        // --- Notepad Core Operations Engine & Zoom Feature ---
-        let loadedTextFileName = "Untitled.txt";
-        let currentNotepadFontSize = 13;
-        let isLeftCtrlPressed = false;
+            // Partition into 40x40 grid to find contiguous drawing density (PCB)
+            const gridCols = 40;
+            const gridRows = 40;
+            const cellW = sw / gridCols;
+            const cellH = sh / gridRows;
+            const density = Array.from({ length: gridRows }, () => new Float32Array(gridCols));
 
-        // Monitor purely for Left Control Key
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'ControlLeft') {
-                isLeftCtrlPressed = true;
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            if (e.code === 'ControlLeft') {
-                isLeftCtrlPressed = false;
-            }
-        });
-
-        // Apply Zoom explicitly to the Notepad Editor area
-        notepadEditorWrapper.addEventListener('wheel', (e) => {
-            if (isLeftCtrlPressed && e.ctrlKey) {
-                // Prevent browser-level zoom execution
-                e.preventDefault();
-
-                if (e.deltaY < 0) {
-                    // Scrolling up increases font size
-                    currentNotepadFontSize = Math.min(currentNotepadFontSize + 1, 48); // Max 48px
-                } else {
-                    // Scrolling down decreases font size
-                    currentNotepadFontSize = Math.max(currentNotepadFontSize - 1, 8); // Min 8px
-                }
-
-                // Apply style changes inline to match
-                notepadTextarea.style.fontSize = `${currentNotepadFontSize}px`;
-                lineNumbers.style.fontSize = `${currentNotepadFontSize}px`;
-            }
-        }, { passive: false });
-
-        btnOpenText.addEventListener('click', async () => {
-            if ('showOpenFilePicker' in window) {
-                try {
-                    const pickerOptions = {
-                        types: [{
-                            description: 'Text Files',
-                            accept: { 'text/plain': ['.txt', '.log', '.file'] }
-                        }],
-                        multiple: false
-                    };
-
-                    if (lastNotepadDirHandle) {
-                        pickerOptions.startIn = lastNotepadDirHandle;
+            for (let y = 0; y < sh; y++) {
+                const gy = Math.min(gridRows - 1, Math.floor(y / cellH));
+                for (let x = 0; x < sw; x++) {
+                    const gx = Math.min(gridCols - 1, Math.floor(x / cellW));
+                    const idx = (y * sw + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2], a = data[idx + 3];
+                    // Detect dark trace/silkscreen/component lines on light background
+                    if (a > 50 && (r < 225 || g < 225 || b < 225)) {
+                        density[gy][gx]++;
                     }
-
-                    const [handle] = await window.showOpenFilePicker(pickerOptions);
-                    lastNotepadDirHandle = handle;
-
-                    const file = await handle.getFile();
-                    processTextFile(file);
-                } catch (err) {
-                    if (err.name !== 'AbortError') console.error(err);
                 }
-            } else {
-                textFileSelector.click();
             }
-        });
 
-        textFileSelector.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            processTextFile(file);
-        });
+            const cellArea = cellW * cellH;
+            const threshold = cellArea * 0.012; // Density cutoff for PCB features
 
-        function processTextFile(file) {
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                notepadTextarea.value = e.target.result;
-                loadedTextFileName = file.name;
-                
-                const ext = file.name.split('.').pop().toUpperCase();
-                notepadFilename.textContent = `📝 ${file.name}`;
-                notepadFileType.textContent = `${ext} Document`;
-                
-                updateNotepadStats();
+            let minGx = gridCols, maxGx = -1, minGy = gridRows, maxGy = -1;
+            
+            for (let gy = 0; gy < gridRows; gy++) {
+                for (let gx = 0; gx < gridCols; gx++) {
+                    if (density[gy][gx] > threshold) {
+                        if (gx < minGx) minGx = gx;
+                        if (gx > maxGx) maxGx = gx;
+                        if (gy < minGy) minGy = gy;
+                        if (gy > maxGy) maxGy = gy;
+                    }
+                }
+            }
+
+            // Fallback if full blank
+            if (maxGx < minGx || maxGy < minGy) {
+                return { left: 0, top: 0, width: w, height: h };
+            }
+
+            // Convert back to original canvas scale with 2% margin padding
+            let cropLeft = (minGx * cellW) / scale;
+            let cropTop = (minGy * cellH) / scale;
+            let cropRight = ((maxGx + 1) * cellW) / scale;
+            let cropBottom = ((maxGy + 1) * cellH) / scale;
+
+            const padX = (cropRight - cropLeft) * 0.02;
+            const padY = (cropBottom - cropTop) * 0.02;
+
+            cropLeft = Math.max(0, cropLeft - padX);
+            cropTop = Math.max(0, cropTop - padY);
+            cropRight = Math.min(w, cropRight + padX);
+            cropBottom = Math.min(h, cropBottom + padY);
+
+            return {
+                left: cropLeft,
+                top: cropTop,
+                width: Math.max(10, cropRight - cropLeft),
+                height: Math.max(10, cropBottom - cropTop)
             };
-            reader.readAsText(file);
         }
 
-        function updateNotepadStats() {
-            const text = notepadTextarea.value;
-            const lines = text.split('\n');
-            const lineCount = lines.length;
-            const charCount = text.length;
-            
-            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
-            const wordCount = text.trim() === '' ? 0 : words.length;
-
-            notepadStats.textContent = `Lines: ${lineCount} | Words: ${wordCount} | Chars: ${charCount}`;
-
-            // Sync line numbers column
-            let lineNumHTML = '';
-            for (let i = 1; i <= lineCount; i++) {
-                lineNumHTML += i + '<br>';
+        // --- Render Mini Map with Auto-Cropped PCB ---
+        function updateMinimap(recalculateCrop = false) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pdfDoc || canvas.width === 0 || canvas.height === 0) {
+                minimapContainer.style.display = 'none';
+                return;
             }
-            lineNumbers.innerHTML = lineNumHTML;
+
+            minimapContainer.style.display = 'flex';
+
+            if (recalculateCrop || !tab.pcbCropBox) {
+                tab.pcbCropBox = detectPcbBounds(canvas);
+            }
+
+            const crop = tab.pcbCropBox;
+            const bodyRect = minimapBody.getBoundingClientRect();
+            const maxW = bodyRect.width - 10;
+            const maxH = bodyRect.height - 10;
+
+            const cropAspect = crop.width / crop.height;
+            let drawW = maxW;
+            let drawH = drawW / cropAspect;
+
+            if (drawH > maxH) {
+                drawH = maxH;
+                drawW = drawH * cropAspect;
+            }
+
+            minimapCanvas.width = drawW;
+            minimapCanvas.height = drawH;
+
+            // Draw purely the PCB cropped area onto the minimap canvas
+            mCtx.fillStyle = '#ffffff';
+            mCtx.fillRect(0, 0, drawW, drawH);
+            mCtx.drawImage(
+                canvas,
+                crop.left, crop.top, crop.width, crop.height,
+                0, 0, drawW, drawH
+            );
+
+            updateMinimapViewport();
         }
 
-        notepadTextarea.addEventListener('input', updateNotepadStats);
+        function updateMinimapViewport() {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pcbCropBox || minimapCanvas.width === 0) return;
 
-        // Keep Line Numbers and Textarea Scrolling Synchronized
-        notepadTextarea.addEventListener('scroll', () => {
-            lineNumbers.scrollTop = notepadTextarea.scrollTop;
+            const crop = tab.pcbCropBox;
+            const vRect = viewerContainer.getBoundingClientRect();
+            const W = canvas.width;
+            const H = canvas.height;
+
+            // Compute visible area on original canvas
+            const cLeft = (vRect.width - W) / 2 + tab.panX;
+            const cTop = (vRect.height - H) / 2 + tab.panY;
+
+            const visL = -cLeft;
+            const visT = -cTop;
+            const visR = vRect.width - cLeft;
+            const visB = vRect.height - cTop;
+
+            // Convert visible area coordinates relative to PCB cropped box
+            const normL = (visL - crop.left) / crop.width;
+            const normT = (visT - crop.top) / crop.height;
+            const normR = (visR - crop.left) / crop.width;
+            const normB = (visB - crop.top) / crop.height;
+
+            const mW = minimapCanvas.width;
+            const mH = minimapCanvas.height;
+
+            let boxL = normL * mW;
+            let boxT = normT * mH;
+            let boxW = (normR - normL) * mW;
+            let boxH = (normB - normT) * mH;
+
+            // Center relative to body
+            const canvasOffsetLeft = (minimapBody.clientWidth - mW) / 2;
+            const canvasOffsetTop = (minimapBody.clientHeight - mH) / 2;
+
+            minimapViewportBox.style.left = `${canvasOffsetLeft + boxL}px`;
+            minimapViewportBox.style.top = `${canvasOffsetTop + boxT}px`;
+            minimapViewportBox.style.width = `${Math.max(10, boxW)}px`;
+            minimapViewportBox.style.height = `${Math.max(10, boxH)}px`;
+        }
+
+        // --- Mini Map Navigation Interactivity ---
+        let isMinimapNavigating = false;
+
+        function navigateFromMinimap(e) {
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pcbCropBox || minimapCanvas.width === 0) return;
+
+            const mRect = minimapCanvas.getBoundingClientRect();
+            const clickX = Math.max(0, Math.min(e.clientX - mRect.left, mRect.width));
+            const clickY = Math.max(0, Math.min(e.clientY - mRect.top, mRect.height));
+
+            const normX = clickX / mRect.width;
+            const normY = clickY / mRect.height;
+
+            const crop = tab.pcbCropBox;
+            const targetCanvasX = crop.left + normX * crop.width;
+            const targetCanvasY = crop.top + normY * crop.height;
+
+            const W = canvas.width;
+            const H = canvas.height;
+
+            tab.panX = (W / 2) - targetCanvasX;
+            tab.panY = (H / 2) - targetCanvasY;
+
+            pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+            updateMinimapViewport();
+        }
+
+        minimapBody.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            isMinimapNavigating = true;
+            navigateFromMinimap(e);
         });
 
-        btnClearText.addEventListener('click', () => {
-            if (notepadTextarea.value.length > 0) {
-                if (confirm("Clear notepad contents?")) {
-                    notepadTextarea.value = '';
-                    loadedTextFileName = "Untitled.txt";
-                    notepadFilename.textContent = "📝 Notepad";
-                    notepadFileType.textContent = "Plain Text";
-                    updateNotepadStats();
-                }
-            }
+        window.addEventListener('mousemove', (e) => {
+            if (isMinimapNavigating) navigateFromMinimap(e);
         });
 
-        btnSaveText.addEventListener('click', async () => {
-            const textContent = notepadTextarea.value;
-            
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: loadedTextFileName,
-                        types: [{
-                            description: 'Text Document',
-                            accept: { 'text/plain': ['.txt', '.log', '.file'] }
-                        }]
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(textContent);
-                    await writable.close();
-                    return;
-                } catch (err) {
-                    if (err.name === 'AbortError') return;
-                }
-            }
-
-            const blob = new Blob([textContent], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = loadedTextFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+        window.addEventListener('mouseup', () => {
+            isMinimapNavigating = false;
         });
 
-        // --- Render Dynamic Tabs Interface Node Loop ---
+        // --- Dynamic Tabs Engine ---
         function renderTabsUI() {
             tabsWrapper.innerHTML = '';
             tabs.forEach((tab) => {
@@ -981,9 +924,7 @@
                     e.dataTransfer.effectAllowed = 'move';
                 });
 
-                tabEl.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                });
+                tabEl.addEventListener('dragover', (e) => e.preventDefault());
 
                 tabEl.addEventListener('drop', (e) => {
                     e.preventDefault();
@@ -1055,6 +996,7 @@
             } else {
                 placeholder.style.display = 'block';
                 pageWrapper.style.display = 'none';
+                minimapContainer.style.display = 'none';
                 
                 pageInfo.textContent = `Page: 0 / 0`;
                 zoomInfo.textContent = `100%`;
@@ -1080,21 +1022,15 @@
             switchTab(newId);
         });
 
-        // Document File Selection Stream
+        // PDF Selection
         btnOpenPdf.addEventListener('click', async () => {
             if ('showOpenFilePicker' in window) {
                 try {
                     const pickerOptions = {
-                        types: [{
-                            description: 'PDF Documents',
-                            accept: { 'application/pdf': ['.pdf'] }
-                        }],
+                        types: [{ description: 'PDF Documents', accept: { 'application/pdf': ['.pdf'] } }],
                         multiple: false
                     };
-
-                    if (lastPdfDirHandle) {
-                        pickerOptions.startIn = lastPdfDirHandle;
-                    }
+                    if (lastPdfDirHandle) pickerOptions.startIn = lastPdfDirHandle;
 
                     const [handle] = await window.showOpenFilePicker(pickerOptions);
                     lastPdfDirHandle = handle;
@@ -1110,8 +1046,7 @@
         });
 
         fileSelector.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            processPdfFile(file);
+            processPdfFile(e.target.files[0]);
         });
 
         function processPdfFile(file) {
@@ -1122,7 +1057,6 @@
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     const typedarray = new Uint8Array(evt.target.result);
-                    
                     tab.fileName = file.name;
                     renderTabsUI();
                     loadPDF(typedarray);
@@ -1144,6 +1078,7 @@
                 tab.searchMatches = [];
                 tab.currentMatchIndex = -1;
                 tab.searchInputVal = '';
+                tab.pcbCropBox = null;
                 searchInput.value = '';
                 resetPan();
                 
@@ -1156,7 +1091,7 @@
                 
                 renderPage(tab.currentPage);
             } catch (error) {
-                alert("Error configuring document engine: " + error.message);
+                alert("Error loading PDF: " + error.message);
             }
         }
 
@@ -1185,7 +1120,6 @@
             const renderContext = { canvasContext: ctx, viewport: tab.currentViewport };
             await page.render(renderContext).promise;
 
-            // Render text layer for selecting and copying text
             textLayer.innerHTML = '';
             textLayer.style.width = `${tab.currentViewport.width}px`;
             textLayer.style.height = `${tab.currentViewport.height}px`;
@@ -1208,61 +1142,57 @@
             
             redrawDrawingCanvas();
             renderNotes(tab.currentViewport);
+            updateMinimap(true);
         }
 
         btnZoomIn.addEventListener('click', () => {
             const tab = tabs.find(t => t.id === activeTabId);
-            if (!tab || tab.currentScale >= 50.0) return; 
-            tab.currentScale = parseFloat((tab.currentScale + 0.50).toFixed(2));
+            if (!tab || tab.currentScale >= MAX_ZOOM) return; 
+            tab.currentScale = parseFloat((Math.min(tab.currentScale + 0.25, MAX_ZOOM)).toFixed(2));
             renderPage(tab.currentPage);
         });
 
         btnZoomOut.addEventListener('click', () => {
             const tab = tabs.find(t => t.id === activeTabId);
-            if (!tab || tab.currentScale <= 0.25) return; 
-            tab.currentScale = parseFloat((tab.currentScale - 0.50).toFixed(2));
-            if (tab.currentScale < 0.25) tab.currentScale = 0.25;
+            if (!tab || tab.currentScale <= MIN_ZOOM) return; 
+            tab.currentScale = parseFloat((Math.max(tab.currentScale - 0.25, MIN_ZOOM)).toFixed(2));
             renderPage(tab.currentPage);
         });
 
+        // Smooth Mouse Scroller Zoom
+        let renderDebounceTimeout = null;
+
         viewerContainer.addEventListener('wheel', (e) => {
-            if (e.ctrlKey) {
-                e.preventDefault(); 
-                const tab = tabs.find(t => t.id === activeTabId);
-                if (!tab || !tab.pdfDoc) return;
+            e.preventDefault(); 
+            const tab = tabs.find(t => t.id === activeTabId);
+            if (!tab || !tab.pdfDoc) return;
 
-                const oldScale = tab.currentScale;
-                let newScale = tab.currentScale;
-                const zoomFactorStep = 0.15; 
+            const oldScale = tab.currentScale;
+            const zoomFactor = Math.exp(-e.deltaY * 0.0015);
+            let newScale = tab.currentScale * zoomFactor;
 
-                if (e.deltaY < 0) {
-                    if (newScale < 50.0) {
-                        newScale = parseFloat((newScale + zoomFactorStep).toFixed(2));
-                    }
-                } else {
-                    if (newScale > 0.25) {
-                        newScale = parseFloat((newScale - zoomFactorStep).toFixed(2));
-                        if (newScale < 0.25) newScale = 0.25;
-                    }
-                }
+            newScale = Math.min(Math.max(newScale, MIN_ZOOM), MAX_ZOOM);
+            if (Math.abs(newScale - oldScale) < 0.0001) return;
 
-                if (newScale !== oldScale) {
-                    const rect = viewerContainer.getBoundingClientRect();
-                    const mouseX = e.clientX - rect.left;
-                    const mouseY = e.clientY - rect.top;
+            const rect = viewerContainer.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
 
-                    const pageX = mouseX - tab.panX;
-                    const pageY = mouseY - tab.panY;
+            const pageX = mouseX - tab.panX;
+            const pageY = mouseY - tab.panY;
 
-                    tab.currentScale = newScale;
+            tab.currentScale = newScale;
+            tab.panX = mouseX - pageX * (newScale / oldScale);
+            tab.panY = mouseY - pageY * (newScale / oldScale);
 
-                    tab.panX = mouseX - pageX * (newScale / oldScale);
-                    tab.panY = mouseY - pageY * (newScale / oldScale);
+            pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+            zoomInfo.textContent = `${Math.round(tab.currentScale * 100)}%`;
+            updateMinimapViewport();
 
-                    pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
-                    renderPage(tab.currentPage);
-                }
-            }
+            clearTimeout(renderDebounceTimeout);
+            renderDebounceTimeout = setTimeout(() => {
+                renderPage(tab.currentPage);
+            }, 120);
         }, { passive: false });
 
         btnRotate.addEventListener('click', () => {
@@ -1288,9 +1218,8 @@
             renderPage(tab.currentPage);
         });
 
-        // Global Mouse Events for Right-Click Panning
+        // Panning Logic
         window.addEventListener('mousedown', (e) => {
-            // e.button === 2 corresponds to Right-Click
             if (e.button === 2 && viewerContainer.contains(e.target)) {
                 isPanning = true;
                 viewerContainer.classList.add('panning');
@@ -1309,15 +1238,15 @@
             tab.panX = e.clientX - startX;
             tab.panY = e.clientY - startY;
             pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+            updateMinimapViewport();
         });
 
-        const stopPanning = (e) => {
+        window.addEventListener('mouseup', () => {
             if (isPanning) {
                 isPanning = false;
                 viewerContainer.classList.remove('panning');
             }
-        };
-        window.addEventListener('mouseup', stopPanning);
+        });
 
         toolSelect.addEventListener('change', (e) => {
             currentTool = e.target.value;
@@ -1326,25 +1255,25 @@
                 textLayer.style.pointerEvents = 'auto';
                 drawingCanvas.style.pointerEvents = 'none';
                 annotationLayer.style.pointerEvents = 'none';
-                tipBanner.textContent = "Select Text with Left-Click | Hold Right-Click & Drag to Pan";
+                tipBanner.textContent = "Use Mouse Scroller to Zoom | Right-Click Drag to Pan | Drag Red Box on Mini Map";
             } else if (currentTool === 'note') {
                 viewerContainer.className = "viewer-container drawing-mode";
                 textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'none';
                 annotationLayer.style.pointerEvents = 'auto';
-                tipBanner.textContent = "Mode: Sticky Note | Click inside the page to place notes";
+                tipBanner.textContent = "Mode: Sticky Note | Click inside page to add notes";
             } else if (currentTool === 'eraser') {
                 viewerContainer.className = "viewer-container drawing-mode";
                 textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'auto';
                 annotationLayer.style.pointerEvents = 'none';
-                tipBanner.textContent = "Mode: Eraser | Click and hold down left-click over any drawing or shape line to wipe it away";
+                tipBanner.textContent = "Mode: Eraser | Click and hold left-click over lines to erase";
             } else {
                 viewerContainer.className = "viewer-container drawing-mode";
                 textLayer.style.pointerEvents = 'none';
                 drawingCanvas.style.pointerEvents = 'auto';
                 annotationLayer.style.pointerEvents = 'none';
-                tipBanner.textContent = `Mode: Drawing Tool | Active Tool: ${currentTool.toUpperCase()}`;
+                tipBanner.textContent = `Mode: Active Tool (${currentTool.toUpperCase()})`;
             }
         });
 
@@ -1398,11 +1327,7 @@
                         }
                     }
                     if (spannedItems.length > 0) {
-                        temporaryMatches.push({
-                            pageNum: p,
-                            itemIndices: spannedItems,
-                            firstItem: pageItems[spannedItems[0]]
-                        });
+                        temporaryMatches.push({ pageNum: p, itemIndices: spannedItems, firstItem: pageItems[spannedItems[0]] });
                     }
                     startPos += query.length;
                 }
@@ -1427,9 +1352,7 @@
                 } else {
                     redrawDrawingCanvas();
                 }
-                if (resetIndex) {
-                    autoCenterOnMatch();
-                }
+                if (resetIndex) autoCenterOnMatch();
             } else {
                 redrawDrawingCanvas();
             }
@@ -1472,6 +1395,7 @@
             tab.panY = (canvas.height / 2) - viewPoint[1];
             
             pageWrapper.style.transform = `translate(${tab.panX}px, ${tab.panY}px)`;
+            updateMinimapViewport();
         }
 
         searchInput.addEventListener('input', () => performSearch(true));
@@ -1528,19 +1452,10 @@
                     let localWidth = item.width / sx;
                     let localHeight = 1;
 
-                    let x1 = e;
-                    let y1 = f;
-                    let x2 = a * localWidth + e;
-                    let y2 = b * localWidth + f;
-                    let x3 = a * localWidth + c * localHeight + e;
-                    let y3 = b * localWidth + d * localHeight + f;
-                    let x4 = c * localHeight + e;
-                    let y4 = d * localHeight + f;
-
-                    let p1 = tab.currentViewport.convertToViewportPoint(x1, y1);
-                    let p2 = tab.currentViewport.convertToViewportPoint(x2, y2);
-                    let p3 = tab.currentViewport.convertToViewportPoint(x3, y3);
-                    let p4 = tab.currentViewport.convertToViewportPoint(x4, y4);
+                    let p1 = tab.currentViewport.convertToViewportPoint(e, f);
+                    let p2 = tab.currentViewport.convertToViewportPoint(a * localWidth + e, b * localWidth + f);
+                    let p3 = tab.currentViewport.convertToViewportPoint(a * localWidth + c * localHeight + e, b * localWidth + d * localHeight + f);
+                    let p4 = tab.currentViewport.convertToViewportPoint(c * localHeight + e, d * localHeight + f);
 
                     dCtx.beginPath();
                     dCtx.moveTo(p1[0], p1[1]);
@@ -1557,7 +1472,6 @@
             const drawItem = (draw) => {
                 dCtx.strokeStyle = draw.color;
                 dCtx.fillStyle = draw.color;
-                
                 dCtx.lineWidth = draw.thickness; 
                 dCtx.lineCap = 'round';
                 dCtx.lineJoin = 'round';
@@ -1648,9 +1562,7 @@
                 return true;
             });
 
-            if (historyMatrixMutated) {
-                redrawDrawingCanvas();
-            }
+            if (historyMatrixMutated) redrawDrawingCanvas();
         }
 
         drawingCanvas.addEventListener('mousedown', (e) => {
@@ -1675,22 +1587,13 @@
 
             if (currentTool === 'pen') {
                 currentDrawingItem = {
-                    type: 'pen',
-                    page: tab.currentPage,
-                    color: chosenColor,
-                    thickness: chosenThickness,
+                    type: 'pen', page: tab.currentPage, color: chosenColor, thickness: chosenThickness,
                     points: [{ pdfX: pdfPoint[0], pdfY: pdfPoint[1] }]
                 };
             } else if (currentTool === 'rect' || currentTool === 'circle') {
                 currentDrawingItem = {
-                    type: currentTool,
-                    page: tab.currentPage,
-                    color: chosenColor,
-                    thickness: chosenThickness,
-                    pdfX1: pdfPoint[0],
-                    pdfY1: pdfPoint[1],
-                    pdfX2: pdfPoint[0],
-                    pdfY2: pdfPoint[1]
+                    type: currentTool, page: tab.currentPage, color: chosenColor, thickness: chosenThickness,
+                    pdfX1: pdfPoint[0], pdfY1: pdfPoint[1], pdfX2: pdfPoint[0], pdfY2: pdfPoint[1]
                 };
             } else if (currentTool === 'text') {
                 isDrawing = false;
@@ -1698,14 +1601,8 @@
                     const textString = prompt("Enter text markup to inject into this page context:");
                     if (textString && textString.trim() !== "") {
                         tab.drawingsData.push({
-                            type: 'text',
-                            page: tab.currentPage,
-                            color: chosenColor,
-                            thickness: chosenThickness,
-                            fontSize: 14, 
-                            pdfX: pdfPoint[0],
-                            pdfY: pdfPoint[1],
-                            text: textString
+                            type: 'text', page: tab.currentPage, color: chosenColor, thickness: chosenThickness,
+                            fontSize: 14, pdfX: pdfPoint[0], pdfY: pdfPoint[1], text: textString
                         });
                         redrawDrawingCanvas();
                     }
@@ -1868,7 +1765,6 @@
                 }
                 
                 let userSpecifiedName = prompt("Enter a filename for your project session backup:", "my_pdf_workspace_session");
-                
                 if (userSpecifiedName === null) return; 
                 userSpecifiedName = userSpecifiedName.trim();
                 if (userSpecifiedName === "") userSpecifiedName = "pdf_workspace_session";
@@ -1887,10 +1783,7 @@
                     try {
                         const handle = await window.showSaveFilePicker({
                             suggestedName: userSpecifiedName,
-                            types: [{
-                                description: 'JSON Session Document',
-                                accept: { 'application/json': ['.json'] }
-                              }]
+                            types: [{ description: 'JSON Session Document', accept: { 'application/json': ['.json'] } }]
                         });
                         const writable = await handle.createWritable();
                         await writable.write(jsonString);
@@ -1898,13 +1791,11 @@
                         return; 
                     } catch (err) {
                         if (err.name === 'AbortError') return; 
-                        console.warn("Save API failed, using standard fallback download pipeline.", err);
                     }
                 }
                 
                 const fileBlob = new Blob([jsonString], { type: "application/json" });
                 const downloadLink = document.createElement('a');
-                
                 downloadLink.href = URL.createObjectURL(fileBlob);
                 downloadLink.download = userSpecifiedName;
                 document.body.appendChild(downloadLink);
@@ -1926,28 +1817,22 @@
             fileReader.onload = function(evt) {
                 try {
                     const parsedProjectBundle = JSON.parse(evt.target.result);
-                    
                     if (parsedProjectBundle.notes && parsedProjectBundle.drawings) {
                         tab.notesData = parsedProjectBundle.notes;
                         tab.drawingsData = parsedProjectBundle.drawings;
-                        
-                        alert("Project markup configurations imported successfully!");
-                        if (tab.currentViewport) {
-                            renderPage(tab.currentPage);
-                        }
+                        alert("Project markup imported successfully!");
+                        if (tab.currentViewport) renderPage(tab.currentPage);
                     } else {
                         alert("Invalid session file schema.");
                     }
                 } catch (err) {
-                    alert("Failed to parse structural JSON elements: " + err.message);
+                    alert("Failed to parse session JSON: " + err.message);
                 }
             };
             fileReader.readAsText(targetedJsonFile);
             sessionFilePicker.value = ""; 
         });
 
-        // Initialize Workspace onto tab 1 on bootup load
-        updateNotepadStats();
         switchTab(0);
     </script>
 </body>
